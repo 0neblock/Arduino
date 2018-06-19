@@ -502,7 +502,10 @@ int WiFiClientSecure::connect(IPAddress ip, uint16_t port)
         return 0;
     }
 
-    return _connectSSL(nullptr);
+    if(_shouldUpgrade)
+        return upgrade(nullptr);
+    else 
+        return 1;
 }
 
 int WiFiClientSecure::connect(const char* name, uint16_t port)
@@ -511,9 +514,22 @@ int WiFiClientSecure::connect(const char* name, uint16_t port)
     if (!WiFi.hostByName(name, remote_addr)) {
         return 0;
     }
+
     if (!WiFiClient::connect(remote_addr, port)) {
         return 0;
     }
+
+    if(_shouldUpgrade)
+        return upgrade(name);
+    else 
+        return 1;
+}
+
+int WiFiClientSecure::dontUpgrade(){
+    _shouldUpgrade = false;
+}
+
+int WiFiClientSecure::upgrade(const char* name){
     return _connectSSL(name);
 }
 
@@ -541,7 +557,7 @@ int WiFiClientSecure::_connectSSL(const char* hostName)
 size_t WiFiClientSecure::write(const uint8_t *buf, size_t size)
 {
     if (!_ssl) {
-        return 0;
+        return WiFiClient::write(buf, size);
     }
 
     int rc = _ssl->write(buf, size);
@@ -567,7 +583,7 @@ size_t WiFiClientSecure::write_P(PGM_P buf, size_t size)
 int WiFiClientSecure::read(uint8_t *buf, size_t size)
 {
     if (!_ssl) {
-        return 0;
+        return WiFiClient::read(buf, size);
     }
 
     return _ssl->read(buf, size);
@@ -576,7 +592,7 @@ int WiFiClientSecure::read(uint8_t *buf, size_t size)
 int WiFiClientSecure::read()
 {
     if (!_ssl) {
-        return -1;
+        return WiFiClient::read();
     }
 
     return _ssl->read();
@@ -585,7 +601,7 @@ int WiFiClientSecure::read()
 int WiFiClientSecure::peek()
 {
     if (!_ssl) {
-        return -1;
+        return WiFiClient::peek();
     }
 
     return _ssl->peek();
@@ -596,7 +612,7 @@ size_t WiFiClientSecure::peekBytes(uint8_t *buffer, size_t length)
     size_t count = 0;
 
     if (!_ssl) {
-        return 0;
+        return WiFiClient::peekBytes(buffer, length);
     }
 
     _startMillis = millis();
@@ -620,10 +636,14 @@ size_t WiFiClientSecure::peekBytes(uint8_t *buffer, size_t length)
 int WiFiClientSecure::available()
 {
     if (!_ssl) {
-        return 0;
+        return WiFiClient::available();
     }
 
     return _ssl->available();
+}
+
+bool WiFiClientSecure::upgraded(){
+    return _ssl ? true : false;
 }
 
 
@@ -644,6 +664,8 @@ uint8_t WiFiClientSecure::connected()
         if (_client && _client->state() == ESTABLISHED && _ssl->connected()) {
             return true;
         }
+    } else {
+        return WiFiClient::connected();
     }
     return false;
 }

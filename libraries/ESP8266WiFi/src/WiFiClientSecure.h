@@ -37,6 +37,12 @@ public:
   int connect(const String host, uint16_t port) override;
   int connect(const char* name, uint16_t port) override;
 
+  int _shouldUpgrade = true;
+  int dontUpgrade();
+  
+  int upgrade(const char* name);
+  bool upgraded(void);
+
   bool verify(const char* fingerprint, const char* domain_name);
   bool verifyCertChain(const char* domain_name);
 
